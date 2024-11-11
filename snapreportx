@@ -1,0 +1,504 @@
+#!/bin/bash
+
+# VAR 1
+time=$(date)
+os=$(uname)
+
+echo "SnapReportX by Fundiman on $os "
+
+# VAR 2
+echo "Please enter the output file name:"
+read OUTPUT_FILE
+
+echo "Started recording report on $time..."
+echo "Please wait for SnapReportX to collect info to create the report..."
+echo "This may take few hours..."
+echo "Till that time, Sit back and relax and let the process happen..."
+
+# Collect information
+{
+    echo "Report collected on $time" 
+    
+    echo "=== 1. System Information ==="
+    uname -a
+    uname -m
+    uname -p
+    uname -i
+    uname
+    hostnamectl
+    echo -e "\n=== 2. Distro Information ==="
+    cat /etc/os-release
+    lsb_release -a 2>/dev/null
+
+    echo -e "\n=== 3. Hostname ==="
+    hostname
+    hostname -I
+    hostnamectl
+
+    echo -e "\n=== 4. Kernel Version ==="
+    uname -r
+    uname -v
+    cat /proc/version
+
+    echo -e "\n=== 5. Uptime ==="
+    uptime
+    who -b
+
+    echo -e "\n=== 6. CPU Information ==="
+    lscpu
+    cat /proc/cpuinfo
+    dmidecode -t processor
+    top -bn1 | grep "Cpu(s)"
+
+    echo -e "\n=== 7. Memory Information ==="
+    free -h
+    cat /proc/meminfo
+    dmidecode -t memory
+    vmstat
+
+    echo -e "\n=== 8. Storage Information ==="
+    lsblk
+    df -h
+    sudo fdisk -l
+    sudo parted -l
+    sudo smartctl --all /dev/sda 2>/dev/null
+    sudo smartctl --all /dev/sdb 2>/dev/null
+
+    echo -e "\n=== 9. GPU Information ==="
+    lspci | grep -i vga
+    lspci -nnk | grep -i vga -A 3
+    if command -v nvidia-smi &> /dev/null; then
+        nvidia-smi
+    fi
+    glxinfo | grep "OpenGL" 2>/dev/null
+
+    echo -e "\n=== 10. Network Information ==="
+    lspci | grep -i net
+    ip a
+    ip r
+    if command -v nmcli &> /dev/null; then
+        nmcli device status
+        nmcli connection show
+    fi
+    sudo ethtool -i eth0 2>/dev/null
+    sudo ethtool eth0 2>/dev/null
+
+    echo -e "\n=== 11. USB Devices ==="
+    lsusb
+    sudo udevadm info --query=all --name=/dev/sda 2>/dev/null
+    sudo udevadm info --query=all --name=/dev/sdb 2>/dev/null
+
+    echo -e "\n=== 12. Installed Packages ==="
+if command -v dpkg &> /dev/null; then
+    dpkg -l
+    elif command -v apt &> /dev/null; then
+    apt list --installed
+    elif command -v yum &> /dev/null; then
+    yum list installed
+    elif command -v dnf &> /dev/null; then
+    dnf list installed
+    elif command -v pacman &> /dev/null; then
+    pacman -Q
+    elif command -v zypper &> /dev/null; then
+    zypper se --installed-only
+    elif command -v equery &> /dev/null; then
+    equery list "*"
+    elif command -v nix-env &> /dev/null; then
+    nix-env -q
+    elif command -v flatpak &> /dev/null; then
+    flatpak list
+    elif command -v snap &> /dev/null; then
+    snap list
+    elif command -v rpm &> /dev/null; then
+    rpm -qa
+    elif command -v xbps-query &> /dev/null; then
+    xbps-query -l
+else
+    echo "No known package manager found."
+fi
+
+    echo -e "\n=== 13. Running Processes ==="
+    ps aux
+    top -b -n 1
+    htop 2>/dev/null
+
+    echo -e "\n=== 14. System Logs ==="
+    dmesg | less
+    journalctl --no-pager
+    sudo cat /var/log/syslog | less
+    sudo cat /var/log/messages | less
+    sudo cat /var/log/dmesg | less
+
+    echo -e "\n=== 15. Power Management ==="
+if command -v tlp-stat &> /dev/null; then
+    sudo tlp-stat -s
+    sudo tlp-stat -b
+fi
+
+    echo -e "\n=== 16. Disk Usage ==="
+    du -sh /*
+    sudo du -sh /var/* 2>/dev/null
+    sudo du -sh /home/* 2>/dev/null
+
+    echo -e "\n=== 17. Open Ports ==="
+    sudo netstat -tuln
+    sudo ss -tuln
+
+    echo -e "\n=== 18. Scheduled Tasks ==="
+    crontab -l
+    sudo crontab -l
+    sudo ls /etc/cron.d/
+    sudo ls /etc/cron.daily/
+    sudo ls /etc/cron.hourly/
+    sudo ls /etc/cron.monthly/
+    sudo ls /etc/cron.weekly/
+
+    echo -e "\n=== 19. Systemd Services ==="
+    systemctl list-units --type=service --state=running
+    systemctl list-units --type=service --state=failed
+    systemctl list-timers
+
+    echo -e "\n=== 20. File System Mounts ==="
+    mount
+    cat /etc/fstab
+
+    echo -e "\n=== 21. Kernel Modules ==="
+    lsmod
+
+    echo -e "\n=== 22. PCI Devices ==="
+    lspci -v
+    lspci -nn
+
+    echo -e "\n=== 23. SELinux Status ==="
+    sestatus 2>/dev/null
+
+    echo -e "\n=== 24. Security Updates Available ==="
+    if command -v apt-get &> /dev/null; then
+        apt-get update -q && apt-get -s upgrade | grep "^Inst" | awk '{print $2}'
+    elif command -v yum &> /dev/null; then
+        yum check-update
+    elif command -v dnf &> /dev/null; then
+        dnf check-update
+    elif command -v pacman &> /dev/null; then
+        pacman -Syu --print | grep "^\\s*\\S" | awk '{print $1}'
+    elif command -v zypper &> /dev/null; then
+        zypper list-updates
+    fi
+
+    echo -e "\n=== 25. Directory Structure==="
+    tree /
+
+    echo -e "\n=== 26. System Architecture ==="
+    arch
+    uname -i
+
+    echo -e "\n=== 27. System Locale ==="
+    locale
+    localectl
+
+    echo -e "\n=== 28. Environment Variables ==="
+    printenv
+
+    echo -e "\n=== 29. Shell Information ==="
+    echo $SHELL
+    echo $0
+
+    echo -e "\n=== 30. Users Information ==="
+    who
+    w
+    last
+
+    echo -e "\n=== 31. Group Information ==="
+    groups
+    cat /etc/group
+
+    echo -e "\n=== 32. Disk Partition Information ==="
+    sudo parted -l
+
+    echo -e "\n=== 33. Swap Space Information ==="
+    swapon --show
+    cat /proc/swaps
+
+    echo -e "\n=== 34. Network Interfaces ==="
+    ip link show
+    ip addr show
+
+    echo -e "\n=== 35. Routing Tables ==="
+    ip route show
+    netstat -r
+
+    echo -e "\n=== 36. IP Configuration ==="
+    ifconfig -a
+
+    echo -e "\n=== 37. DHCP Leases ==="
+    sudo cat /var/lib/dhcp/dhclient.leases 2>/dev/null
+
+    echo -e "\n=== 38. Firewall Rules ==="
+    sudo iptables -L -n -v
+    sudo ip6tables -L -n -v
+
+    echo -e "\n=== 39. Wireless Network Information ==="
+    iwconfig
+    sudo iwlist scan
+
+    echo -e "\n=== 40. Bluetooth Devices ==="
+    hciconfig -a
+    sudo btmon
+
+    echo -e "\n=== 41. Printer Information ==="
+    lpstat -p -d
+    lpinfo -v
+
+    echo -e "\n=== 42. File System Information ==="
+    df -T
+    sudo tune2fs -l /dev/sda1 2>/dev/null
+
+    echo -e "\n=== 43. Mounted Filesystems ==="
+    mount | grep -E '^/dev/'
+
+    echo -e "\n=== 44. System Configuration Files ==="
+    sudo cat /etc/sysctl.conf
+    sudo sysctl -a
+
+    echo -e "\n=== 45. Memory Usage ==="
+    top -b -n 1 | grep "Mem:"
+    free -m
+
+    echo -e "\n=== 46. CPU Usage ==="
+    mpstat -P ALL 1 1
+    sar -u 1 1
+
+    echo -e "\n=== 47. Disk I/O Statistics ==="
+    iostat
+    vmstat -d
+
+    echo -e "\n=== 48. System Boot Information ==="
+    sudo journalctl -b
+
+    echo -e "\n=== 49. System Services ==="
+    systemctl list-units --type=service
+    systemctl --failed
+
+    echo -e "\n=== 50. Network Statistics ==="
+    netstat -s
+    ss -s
+
+    echo -e "\n=== 51. Log Files ==="
+    sudo ls -l /var/log/
+
+    echo -e "\n=== 52. CPU Temperature ==="
+    sensors 2>/dev/null
+
+    echo -e "\n=== 53. Fan Speed ==="
+    sudo sensors -f 2>/dev/null
+
+    echo -e "\n=== 54. Battery Information ==="
+    upower -i $(upower -e | grep 'battery') 2>/dev/null
+
+    echo -e "\n=== 55. RAID Configuration ==="
+    sudo mdadm --detail --scan 2>/dev/null
+
+    echo -e "\n=== 56. LVM Configuration ==="
+    sudo vgdisplay
+    sudo lvdisplay
+
+    echo -e "\n=== 57. SELinux Status ==="
+    sestatus 2>/dev/null
+
+    echo -e "\n=== 58. AppArmor Status ==="
+    sudo aa-status 2>/dev/null
+
+    echo -e "\n=== 59. Kernel Boot Parameters ==="
+    cat /proc/cmdline
+
+    echo -e "\n=== 60. Current User Information ==="
+    id
+    whoami
+
+    echo -e "\n=== 61. Installed Kernels ==="
+    dpkg --list | grep linux-image
+
+    echo -e "\n=== 62. System Locale ==="
+    locale
+    localectl
+
+    echo -e "\n=== 63. Installed Perl Modules ==="
+    perl -e 'print join("\n", sort glob("/usr/share/perl5/*"))'
+
+    echo -e "\n=== 64. System Load ==="
+    uptime
+    top -b -n 1 | grep "load average:"
+
+    echo -e "\n=== 65. NTP Status ==="
+    timedatectl status
+    ntpq -p
+
+    echo -e "\n=== 66. CPU Frequency Information ==="
+    cat /proc/cpuinfo | grep "cpu MHz"
+
+    echo -e "\n=== 67. Network Interfaces and Configuration ==="
+    ifconfig -a
+    ip link show
+
+    echo -e "\n=== 68. System Resource Usage ==="
+    vmstat
+    iostat
+
+    echo -e "\n=== 69. Swap Usage ==="
+    swapon --show
+
+    echo -e "\n=== 70. System Boot Time ==="
+    who -b
+    uptime -s
+
+    echo -e "\n=== 71. SSH Configuration ==="
+    sudo cat /etc/ssh/sshd_config
+
+    echo -e "\n=== 72. Apache Configuration ==="
+    if command -v apache2ctl &> /dev/null; then
+        apache2ctl -V
+    elif command -v httpd &> /dev/null; then
+        httpd -V
+    fi
+
+    echo -e "\n=== 73. Nginx Configuration ==="
+    if command -v nginx &> /dev/null; then
+        nginx -V
+    fi
+
+    echo -e "\n=== 74. MySQL/MariaDB Configuration ==="
+    if command -v mysql &> /dev/null; then
+        mysql --version
+        mysql -e "SHOW VARIABLES LIKE '%version%';"
+    fi
+
+    echo -e "\n=== 75. PostgreSQL Configuration ==="
+    if command -v psql &> /dev/null; then
+        psql --version
+        psql -c "SELECT version();"
+    fi
+
+    echo -e "\n=== 76. Docker Information ==="
+    if command -v docker &> /dev/null; then
+        docker info
+        docker ps
+    fi
+
+    echo -e "\n=== 77. System Performance Metrics ==="
+    sar -A
+    mpstat -P ALL
+
+    echo -e "\n=== 78. System Boot Logs ==="
+    sudo journalctl --boot
+
+    echo -e "\n=== 79. Package Manager Status ==="
+    if command -v apt &> /dev/null; then
+        apt list --upgradable
+    elif command -v yum &> /dev/null; then
+        yum check-update
+    elif command -v dnf &> /dev/null; then
+        dnf check-update
+    elif command -v pacman &> /dev/null; then
+        pacman -Qu
+    elif command -v zypper &> /dev/null; then
+        zypper list-updates
+    fi
+
+    echo -e "\n=== 80. Systemd Timers ==="
+    systemctl list-timers
+
+    echo -e "\n=== 81. Scheduled Cron Jobs ==="
+    crontab -l
+    sudo crontab -l
+    sudo ls /etc/cron.d/
+    sudo ls /etc/cron.daily/
+    sudo ls /etc/cron.hourly/
+    sudo ls /etc/cron.monthly/
+    sudo ls /etc/cron.weekly/
+
+    echo -e "\n=== 82. System Memory Usage ==="
+    free -m
+    vmstat
+
+    echo -e "\n=== 83. Network Traffic ==="
+    ifstat
+    vnstat
+
+    echo -e "\n=== 84. File System Usage ==="
+    df -hT
+    du -sh /*
+
+    echo -e "\n=== 85. Kernel Logs ==="
+    sudo cat /var/log/kern.log | less
+
+    echo -e "\n=== 86. Disk Health ==="
+    sudo smartctl -a /dev/sda
+    sudo smartctl -a /dev/sdb
+
+    echo -e "\n=== 87. Power Management ==="
+    acpi -V
+    tlp-stat
+
+    echo -e "\n=== 88. System Information Summary ==="
+    hostnamectl
+    uname -a
+
+    echo -e "\n=== 89. System Services ==="
+    systemctl list-units --type=service --state=running
+    systemctl list-units --type=service --state=failed
+
+    echo -e "\n=== 90. Loaded Kernel Modules ==="
+    lsmod
+
+    echo -e "\n=== 91. Open Files ==="
+    lsof
+
+    echo -e "\n=== 92. Running Jobs ==="
+    jobs -l
+
+    echo -e "\n=== 93. Active Sessions ==="
+    who
+    w
+
+    echo -e "\n=== 94. User Processes ==="
+    ps -u $(whoami)
+
+    echo -e "\n=== 95. System Resource Limits ==="
+    ulimit -a
+
+    echo -e "\n=== 96. Installed Applications ==="
+    dpkg --list | grep '^ii'
+    rpm -qa
+
+    echo -e "\n=== 97. Disk I/O Statistics ==="
+    iostat -x
+
+    echo -e "\n=== 98. Network Interface Configuration ==="
+    ip addr
+    ip route
+
+    echo -e "\n=== 99. Active Network Connections ==="
+    netstat -tnp
+    ss -tnp
+
+    echo -e "\n=== 100. Configuration Files ==="
+    sudo cat /etc/sysctl.conf
+    sudo cat /etc/hosts
+    sudo cat /etc/resolv.conf
+    sudo cat /etc/network/interfaces
+    sudo cat /etc/environment
+    sudo cat /etc/ssh/sshd_config
+    sudo cat /etc/services
+    sudo cat /etc/fstab
+    sudo cat /etc/login.defs
+    sudo cat /etc/pam.d/common-auth
+    sudo cat /etc/pam.d/common-password
+    sudo cat /etc/pam.d/common-session
+    sudo cat /etc/rsyslog.conf
+    sudo cat /etc/crontab
+    sudo cat /etc/hostname
+    sudo cat /etc/profile
+    sudo cat /etc/bash.bashrc
+} > "$OUTPUT_FILE"
+
+echo "Report was sucessfully created and saved to $OUTPUT_FILE"
