@@ -28,12 +28,17 @@
    git clone https://github.com/Fundiman/SnapReportX.git
    ```
 
-2. Make the script executable:
+2. Cd into The Directory
+   ```
+   cd SnapReportX
+   ```
+
+3. Make the script executable:
    ```
    chmod +x snapreportx
    ```
 
-3. Run the script:
+4. Run the script:
    ```
    ./snapreportx
    ```
